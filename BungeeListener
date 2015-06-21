@@ -1,0 +1,72 @@
+Enter file contents herepackage co.uk.pixelisedmc.IRC;
+
+import java.util.ArrayList;
+import java.util.List;
+import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.connection.PendingConnection;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.event.ChatEvent;
+import net.md_5.bungee.api.event.LoginEvent;
+import net.md_5.bungee.api.event.PlayerDisconnectEvent;
+import net.md_5.bungee.api.plugin.Listener;
+import net.md_5.bungee.api.plugin.PluginManager;
+import net.md_5.bungee.event.EventHandler;
+
+public class BungeeListener
+  implements Listener
+{
+  public IRCMain pasta;
+  public List<String> input = new ArrayList();
+  private IRCListener irc;
+  
+  public BungeeListener(IRCMain Nethad)
+  {
+    this.pasta = Nethad;
+    this.pasta.getProxy().getPluginManager().registerListener(this.pasta, this);
+    this.irc = this.pasta.getBot();
+  }
+  
+  @EventHandler
+  public void onPlayerChat(ChatEvent e)
+  {
+    if (e.isCommand()) {
+      return;
+    }
+    if ((e.getSender() instanceof ProxiedPlayer))
+    {
+      ProxiedPlayer s = (ProxiedPlayer)e.getSender();
+      
+      String format = this.pasta.getConfig().chatFormat;
+      String chatMessage = this.pasta.decolorize(e.getMessage());
+      format = this.pasta.replaceMinecraftPlaceholders(s, chatMessage, format);
+      format = this.pasta.colorize(format);
+      if (this.pasta.getConfig().crossServerChat)
+      {
+        e.setCancelled(true);
+        for (ProxiedPlayer pl : this.pasta.getProxy().getPlayers()) {
+          if ((pl instanceof ProxiedPlayer)) {
+            pl.sendMessage(format);
+          }
+        }
+      }
+      format = this.pasta.decolorize(format);
+      this.irc.sendMessage(this.pasta.getConfig().channelName, format);
+      return;
+    }
+  }
+  
+  @EventHandler
+  public void onPlayerJoin(LoginEvent e)
+  {
+    if (e.isCancelled()) {
+      return;
+    }
+    this.irc.sendMessage(this.pasta.getConfig().channelName, e.getConnection().getName() + " joined the server");
+  }
+  
+  @EventHandler
+  public void onPlayerLeave(PlayerDisconnectEvent e)
+  {
+    this.irc.sendMessage(this.pasta.getConfig().channelName, e.getPlayer().getDisplayName() + " left the server");
+  }
+}
